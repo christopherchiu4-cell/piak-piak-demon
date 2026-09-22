@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum Subject {
+  MATH
+  ENGLISH
+}
+
+enum ActivityKind {
+  CLASSWORK
+  HOMEWORK
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+model User {
+  id                  String        @id @default(cuid())
+  login               String        @unique
+  displayName         String
+  role                Role
+  credentialHash      String
+  active              Boolean       @default(true)
+  failedLogins        Int           @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime      @default(now())
+  sessions            LoginSession[]
+  studentAssignments  Assignment[]  @relation("StudentAssignments")
+  teacherAssignments  Assignment[]  @relation("TeacherAssignments")
+  classes             ClassSession[]
+}
+
+model LoginSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ClassSession {
+  id               String       @id @default(cuid())
+  studentId        String
+  student          User         @relation(fields: [studentId], references: [id])
+  startsAt         DateTime
+  title            String
+  planKey          String
+  planVersion      Int
+  notes            String       @default("") @db.Text
+  notesPublishedAt DateTime?
+  createdAt        DateTime     @default(now())
+  assignments      Assignment[]
+}
+
+model Assignment {
+  id             String        @id @default(cuid())
+  studentId      String
+  student        User          @relation("StudentAssignments", fields: [studentId], references: [id])
+  teacherId      String
+  teacher        User          @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  classSessionId String?
+  classSession   ClassSession? @relation(fields: [classSessionId], references: [id])
+  contentKey     String
+  contentVersion Int
+  kind           ActivityKind
+  subject        Subject
+  availableAt    DateTime      @default(now())
+  dueAt          DateTime?
+  maxAttempts    Int           @default(1)
+  createdAt      DateTime      @default(now())
+  attempts       Attempt[]
+
+  @@index([studentId, kind, availableAt])
+  @@index([classSessionId])
+}
+
+model Attempt {
+  id           String        @id @default(cuid())
+  assignmentId String
+  assignment   Assignment    @relation(fields: [assignmentId], references: [id])
+  number       Int
+  status       AttemptStatus @default(IN_PROGRESS)
+  startedAt    DateTime      @default(now())
+  submittedAt  DateTime?
+  responses    Response[]
+
+  @@unique([assignmentId, number])
+}
+
+model Response {
+  id          String   @id @default(cuid())
+  attemptId   String
+  attempt     Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId  String
+  answer      String   @default("") @db.Text
+  score       Int?
+  maxPoints   Int
+  feedback    String   @default("") @db.Text
+  reviewedAt  DateTime?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([attemptId, questionId])
+}
