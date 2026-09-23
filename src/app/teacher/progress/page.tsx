@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { getActivity } from "@/content/catalog";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -11,7 +11,7 @@ const empty = (): Score => ({ earned: 0, graded: 0, pending: 0, attempts: 0 });
 export default async function ProgressPage() {
   await requireRole("TEACHER");
   const students = await db.user.findMany({ where: { role: "STUDENT" }, include: {
-    studentAssignments: { include: { attempts: { where: { status: "SUBMITTED" }, orderBy: { number: "desc" }, include: { responses: true } } } },
+    studentAssignments: { include: { attempts: { where: { status: "SUBMITTED", deletedAt: null }, orderBy: { number: "desc" }, include: { responses: true } } } },
   }, orderBy: { displayName: "asc" } });
   return <><PageHeading eyebrow="Learning progress" title="Results by subject and topic">This overview uses the most recent submitted attempt for each assignment. Open an assignment to see every attempt and question.</PageHeading>
     {students.length ? students.map((student) => {

@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "./db";
@@ -14,7 +14,7 @@ export const currentUser = cache(async () => {
   const session = await db.loginSession.findUnique({
     where: { tokenHash: hashToken(token) }, include: { user: true },
   });
-  if (!session || session.expiresAt < new Date() || !session.user.active) return null;
+  if (!session || session.expiresAt < new Date() || !session.user?.active) return null;
   return session.user;
 });
 
@@ -37,13 +37,16 @@ export async function authenticate(login: string, credential: string, role: "TEA
     } });
     return false;
   }
-  await db.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
+  if (user.failedLogins || user.lockedUntil) {
+    await db.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
+  }
   const token = createToken();
   await db.loginSession.create({ data: {
     userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + sessionLengthMs),
   } });
+  const isHttps = (await headers()).get("x-forwarded-proto") === "https";
   (await cookies()).set(cookieName, token, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax",
+    httpOnly: true, secure: isHttps, sameSite: "lax",
     path: "/", maxAge: sessionLengthMs / 1000,
   });
   return true;

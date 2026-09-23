@@ -5,6 +5,7 @@ export const mathHomework: ActivityContent = {
   version: 1,
   title: "Numbers: foundations",
   subject: "MATH",
+  topicIds: ["math-number"],
   summary: "Number families, roots, factors, and mathematical reasoning.",
   instructions: "Work through each question. Use paper for your working. Written explanations will be reviewed by your tutor.",
   questions: [
@@ -61,6 +62,7 @@ export const mathClasswork: ActivityContent = {
   version: 1,
   title: "Factors and multiples in class",
   subject: "MATH",
+  topicIds: ["math-number"],
   summary: "A short class activity on GCF and LCM.",
   instructions: "Show your working on paper, then enter your answers.",
   questions: [

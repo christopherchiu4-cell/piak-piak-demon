@@ -1,10 +1,12 @@
-import Link from "next/link";
+import { ActionForm, SubmitButton } from "@/components/action-form";
+import Link from "@/components/pending-link";
 import { notFound } from "next/navigation";
 import { startAttempt } from "@/app/actions/student";
 import { getActivity } from "@/content/catalog";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { studentActivity, summaryByTopic } from "@/lib/grading";
+import { ReadingPanel } from "@/components/reading-panel";
 import { AnswerSheet } from "@/components/answer-sheet";
 import { Badge, PageHeading, dateLabel } from "@/components/ui";
 
@@ -12,17 +14,18 @@ export default async function StudentAssignment({ params, searchParams }: { para
   const student = await requireRole("STUDENT");
   const { id } = await params;
   const query = await searchParams;
-  const assignment = await db.assignment.findFirst({ where: { id, studentId: student.id, availableAt: { lte: new Date() } }, include: { attempts: { orderBy: { number: "desc" }, include: { responses: true } } } });
+  const assignment = await db.assignment.findFirst({ where: { id, studentId: student.id, availableAt: { lte: new Date() } }, include: { attempts: { where: { deletedAt: null }, orderBy: { number: "desc" }, include: { responses: true } } } });
   if (!assignment) notFound();
   const activity = getActivity(assignment.contentKey, assignment.contentVersion);
   if (!activity) return <p className="alert">This activity version is temporarily unavailable. Ask your tutor to restore it.</p>;
   const selected = query.attempt ? assignment.attempts.find((item) => item.id === query.attempt) : assignment.attempts.find((item) => item.status === "IN_PROGRESS") ?? assignment.attempts[0];
+  if (query.attempt && !selected) notFound();
   const canStart = !assignment.attempts.some((item) => item.status === "IN_PROGRESS") && assignment.attempts.length < assignment.maxAttempts;
   return <><PageHeading eyebrow={`${assignment.kind === "HOMEWORK" ? "Homework" : "Classwork"} · ${activity.subject === "MATH" ? "Math" : "English"}`} title={activity.title}>{activity.instructions}</PageHeading>
-    {activity.passage && selected?.status === "SUBMITTED" && <section className="card passage-main"><h2>Reading passage</h2><p>{activity.passage}</p></section>}
-    <div className="attempt-bar"><div><strong>Attempts</strong><div className="attempt-links">{assignment.attempts.map((item) => <Link key={item.id} className={selected?.id === item.id ? "active" : ""} href={`/student/assignments/${id}?attempt=${item.id}`}>Attempt {item.number} · {item.status === "SUBMITTED" ? "submitted" : "in progress"}</Link>)}</div></div>{canStart && <form action={startAttempt}><input type="hidden" name="assignmentId" value={id} /><button className="button secondary">Start {assignment.attempts.length ? "another" : "first"} attempt</button></form>}</div>
-    {!selected && <section className="card empty-work"><h2>Ready to begin?</h2><p>This activity has {activity.questions.length} questions. Your answers will save as you work.</p><form action={startAttempt}><input type="hidden" name="assignmentId" value={id} /><button className="button primary">Start assignment</button></form></section>}
-    {selected?.status === "IN_PROGRESS" && <AnswerSheet attemptId={selected.id} activity={studentActivity(activity)} initialAnswers={Object.fromEntries(selected.responses.map((response) => [response.questionId, response.answer]))} />}
+    {activity.passage && selected?.status !== "IN_PROGRESS" && <ReadingPanel passage={activity.passage} />}
+    <div className="attempt-bar"><div><strong>Attempts</strong><div className="attempt-links">{assignment.attempts.map((item) => <Link key={item.id} className={selected?.id === item.id ? "active" : ""} href={`/student/assignments/${id}?attempt=${item.id}`}>Attempt {item.number} · {item.status === "SUBMITTED" ? "submitted" : "in progress"}</Link>)}</div></div>{canStart && <ActionForm action={startAttempt}><input type="hidden" name="assignmentId" value={id} /><SubmitButton className="button secondary" pendingLabel="Starting…">Start {assignment.attempts.length ? "another" : "first"} attempt</SubmitButton></ActionForm>}</div>
+    {!selected && <section className="card empty-work"><h2>Ready to begin?</h2><p>This activity has {activity.questions.length} questions. Your answers will save as you work.</p><ActionForm action={startAttempt}><input type="hidden" name="assignmentId" value={id} /><SubmitButton className="button primary" pendingLabel="Starting…">Start assignment</SubmitButton></ActionForm></section>}
+    {selected?.status === "IN_PROGRESS" && <AnswerSheet key={selected.id} attemptId={selected.id} activity={studentActivity(activity)} initialAnswers={Object.fromEntries(selected.responses.map((response) => [response.questionId, response.answer]))} />}
     {selected?.status === "SUBMITTED" && (() => {
       const responses = new Map(selected.responses.map((response) => [response.questionId, response]));
       const topics = summaryByTopic(activity, selected.responses);

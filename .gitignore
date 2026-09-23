@@ -4,3 +4,6 @@ node_modules
 .env.local
 src/generated
 *.tsbuildinfo
+
+.DS_Store
+context/*.pdf

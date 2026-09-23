@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getActivity, getPlan } from "@/content/catalog";
@@ -7,7 +7,7 @@ import { Badge, PageHeading, dateLabel } from "@/components/ui";
 export default async function StudentHome() {
   const student = await requireRole("STUDENT");
   const [assignments, classes] = await Promise.all([
-    db.assignment.findMany({ where: { studentId: student.id, availableAt: { lte: new Date() } }, include: { attempts: true }, orderBy: { createdAt: "desc" }, take: 6 }),
+    db.assignment.findMany({ where: { studentId: student.id, availableAt: { lte: new Date() } }, include: { attempts: { where: { deletedAt: null } } }, orderBy: { createdAt: "desc" }, take: 6 }),
     db.classSession.findMany({ where: { studentId: student.id }, orderBy: { startsAt: "desc" }, take: 3 }),
   ]);
   return <><PageHeading eyebrow="Student overview" title={`Hello, ${student.displayName}`}>Your lessons and assignments are ready when you are.</PageHeading>

@@ -5,6 +5,6 @@ import { StudentAssignmentList } from "@/components/student-assignment-list";
 
 export default async function ClassworkPage() {
   const student = await requireRole("STUDENT");
-  const assignments = await db.assignment.findMany({ where: { studentId: student.id, kind: "CLASSWORK", availableAt: { lte: new Date() } }, include: { attempts: true }, orderBy: { createdAt: "desc" } });
+  const assignments = await db.assignment.findMany({ where: { studentId: student.id, kind: "CLASSWORK", availableAt: { lte: new Date() } }, include: { attempts: { where: { deletedAt: null } } }, orderBy: { createdAt: "desc" } });
   return <><PageHeading eyebrow="Work during lessons" title="Classwork">Activities your tutor has assigned for class.</PageHeading><StudentAssignmentList assignments={assignments} /></>;
 }

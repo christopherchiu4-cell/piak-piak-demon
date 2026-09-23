@@ -9,19 +9,24 @@ import { gradeQuestion } from "@/lib/grading";
 
 async function authorizedAttempt(attemptId: string, studentId: string) {
   const attempt = await db.attempt.findUnique({ where: { id: attemptId }, include: { assignment: true } });
-  if (!attempt || attempt.assignment.studentId !== studentId) throw new Error("Attempt not found.");
+  if (!attempt || attempt.deletedAt || attempt.assignment.studentId !== studentId) throw new Error("Attempt not found.");
   return attempt;
 }
 
 export async function startAttempt(formData: FormData) {
   const student = await requireRole("STUDENT");
   const assignmentId = String(formData.get("assignmentId") ?? "");
-  const assignment = await db.assignment.findUnique({ where: { id: assignmentId }, include: { attempts: true } });
-  if (!assignment || assignment.studentId !== student.id || assignment.availableAt > new Date()) throw new Error("Assignment unavailable.");
-  const existing = assignment.attempts.find((attempt) => attempt.status === "IN_PROGRESS");
-  if (existing) redirect(`/student/assignments/${assignmentId}`);
-  if (assignment.attempts.length >= assignment.maxAttempts) throw new Error("No attempts remain.");
-  await db.attempt.create({ data: { assignmentId, number: assignment.attempts.length + 1 } });
+  await db.$transaction(async (tx) => {
+    // Serialize starts for one assignment, including replacement attempts after trash.
+    const available = await tx.assignment.updateMany({ where: { id: assignmentId, studentId: student.id, availableAt: { lte: new Date() } }, data: { maxAttempts: { increment: 0 } } });
+    if (!available.count) throw new Error("Assignment unavailable.");
+    const assignment = await tx.assignment.findUniqueOrThrow({ where: { id: assignmentId }, include: { attempts: true } });
+    const visible = assignment.attempts.filter((attempt) => !attempt.deletedAt);
+    if (visible.some((attempt) => attempt.status === "IN_PROGRESS")) return;
+    if (visible.length >= assignment.maxAttempts) throw new Error("No attempts remain.");
+    const number = Math.max(0, ...assignment.attempts.map((attempt) => attempt.number)) + 1;
+    await tx.attempt.create({ data: { assignmentId, number } });
+  }, { timeout: 15000 });
   redirect(`/student/assignments/${assignmentId}`);
 }
 
@@ -59,17 +64,17 @@ export async function submitAttempt(attemptId: string, submittedAnswers: Record<
     if (updated.count !== 1) return;
     const existing = await tx.response.findMany({ where: { attemptId } });
     const previous = new Map(existing.map((response) => [response.questionId, response.answer]));
-    for (const question of activity.questions) {
+    const responses = activity.questions.map((question) => {
       const incoming = submittedAnswers[question.id];
       const answer = (typeof incoming === "string" ? incoming : previous.get(question.id) ?? "").slice(0, 20000);
       const score = gradeQuestion(question, answer);
-      await tx.response.upsert({
-        where: { attemptId_questionId: { attemptId, questionId: question.id } },
-        update: { answer, score, maxPoints: question.points },
-        create: { attemptId, questionId: question.id, answer, score, maxPoints: question.points },
-      });
-    }
-  });
+      return { attemptId, questionId: question.id, answer, score, maxPoints: question.points };
+    });
+    // Finalize this attempt's draft answers in one batch, atomically with submission.
+    // Earlier attempts and their reviewed responses are never touched.
+    await tx.response.deleteMany({ where: { attemptId } });
+    await tx.response.createMany({ data: responses });
+  }, { timeout: 15000 });
   revalidatePath(`/student/assignments/${attempt.assignmentId}`);
   redirect(`/student/assignments/${attempt.assignmentId}?attempt=${attemptId}`);
 }

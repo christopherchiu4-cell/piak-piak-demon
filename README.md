@@ -13,7 +13,7 @@ A Next.js tutoring portal with separate teacher and student views for Math and E
 1. Copy `.env.example` to `.env` and fill in:
    - `DATABASE_URL`: pooled Prisma Postgres URL for the application.
    - `DIRECT_URL`: direct Prisma Postgres URL for migrations.
-   - `TEACHER_LOGIN`: teacher email.
+   - `TEACHER_LOGIN`: teacher username.
    - `TEACHER_PASSWORD`: initial teacher password (10 or more characters; a longer password is recommended).
 2. Run `pnpm install`.
 3. Run `pnpm db:deploy` to apply the checked-in initial migration.
@@ -30,15 +30,18 @@ The `.env` file and generated Prisma client are ignored by Git. The same `DATABA
 4. Save after-lesson notes as a draft, then publish them from the class page. These text notes are stored in PostgreSQL and do not need a redeploy.
 5. Review submitted attempts, grade written answers, and inspect **Progress** by subject and topic.
 6. To allow another attempt, use **Allow another attempt**. Previous attempts remain available.
+7. Use **Move to Trash** on a submitted attempt to hide it from the student and reports. Restore it from **Trash**. Trashed attempts do not use an attempt slot; replacements receive a new number, and restoration retains both histories.
 
 ## Publishing new instructional content
 
-1. Add a new typed activity or class plan in `src/content/`. The existing files are examples of the required structure.
+1. Read `context/README.md` for the textbook index and choose `topicIds` from `src/content/topics.ts`. Add a new typed activity or class plan in `src/content/`. The existing files are examples of the required structure.
 2. Register it in `src/content/catalog.ts`. Use a stable `key` and increment `version` when changing published content.
 3. Keep old versions in the catalog while assignments or attempts refer to them.
 4. Run `pnpm test` and `pnpm build`, then redeploy the app. The teacher's **Content** page previews what that deployment contains. There is no runtime content import or media storage.
 
 Multiple-choice and numeric questions are scored on submission. Written answers with content remain pending until teacher review; blank answers receive zero. The student sees explanations immediately after submission. Scores update after written grading.
+
+The teaching library and assignment picker group activities by Subject → Topic. Empty topic groups provide a place for future content. English uses a tutor-defined taxonomy until reference texts are added.
 
 ## Project map
 

@@ -5,6 +5,7 @@ export const englishReading: ActivityContent = {
   version: 1,
   title: "Reading: evidence and inference",
   subject: "ENGLISH",
+  topicIds: ["english-reading"],
   summary: "Read a short passage and support an inference with evidence.",
   instructions: "Read the passage carefully. Use details from the text in your written answer.",
   passage: "Mara reached the library just as the rain began. She shook her umbrella by the door, then saw the empty display table where the town's old map had been. A small card remained: 'On loan for restoration.' Mara checked the return date twice. The history exhibition opened tomorrow, and she had promised to show the map to her grandfather. She took out her notebook and began listing other places she might find a copy.",
@@ -28,6 +29,7 @@ export const englishWriting: ActivityContent = {
   version: 1,
   title: "Persuasive writing: library hours",
   subject: "ENGLISH",
+  topicIds: ["english-persuasion"],
   summary: "Write a short argument with evidence and a counterargument.",
   instructions: "Write a persuasive response in paragraphs. Plan your argument before you begin.",
   questions: [

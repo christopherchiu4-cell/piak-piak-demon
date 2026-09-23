@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getTopic } from "./topics";
 
 const baseQuestion = z.object({
   id: z.string().min(1),
@@ -37,6 +38,7 @@ export const activitySchema = z.object({
   version: z.number().int().positive(),
   title: z.string().min(1),
   subject: z.enum(["MATH", "ENGLISH"]),
+  topicIds: z.array(z.string()).min(1),
   summary: z.string().min(1),
   instructions: z.string().min(1),
   passage: z.string().optional(),
@@ -59,6 +61,10 @@ export type PlanContent = z.infer<typeof planSchema>;
 
 export function validateActivity(value: unknown): ActivityContent {
   const activity = activitySchema.parse(value);
+  if (new Set(activity.topicIds).size !== activity.topicIds.length) throw new Error("Duplicate activity topic.");
+  for (const id of activity.topicIds) {
+    if (getTopic(id)?.subject !== activity.subject) throw new Error(`Unknown or mismatched topic: ${id}`);
+  }
   const ids = new Set<string>();
   for (const question of activity.questions) {
     if (ids.has(question.id)) throw new Error(`Duplicate question ID: ${question.id}`);

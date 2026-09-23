@@ -8,7 +8,7 @@ export async function signIn(formData: FormData) {
   const login = String(formData.get("login") ?? "");
   const credential = String(formData.get("credential") ?? "");
   const valid = await authenticate(login, credential, role);
-  if (!valid) redirect("/login?error=1");
+  if (!valid) redirect(`/login?error=1&role=${role.toLowerCase()}`);
   redirect(role === "TEACHER" ? "/teacher" : "/student");
 }
 

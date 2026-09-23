@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/pending-link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { PageHeading, Badge, dateLabel } from "@/components/ui";
@@ -9,7 +9,7 @@ export default async function TeacherHome() {
     db.user.count({ where: { role: "STUDENT", active: true } }),
     db.assignment.count(),
     db.classSession.findMany({ orderBy: { startsAt: "desc" }, take: 3 }),
-    db.response.count({ where: { score: null, attempt: { status: "SUBMITTED" } } }),
+    db.response.count({ where: { score: null, attempt: { status: "SUBMITTED", deletedAt: null } } }),
   ]);
   return <><PageHeading eyebrow="Teacher overview" title="Your tutoring workspace">Plan a class, assign work, and review the student&apos;s progress.</PageHeading>
     <div className="stat-grid"><div className="stat"><span>Active students</span><strong>{students}</strong></div><div className="stat"><span>Assignments</span><strong>{assignments}</strong></div><div className="stat"><span>Written answers to grade</span><strong>{pending}</strong></div></div>

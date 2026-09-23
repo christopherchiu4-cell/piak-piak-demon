@@ -41,6 +41,28 @@
 - [x] Create and verify the teacher account from the private `.env` file.
 - [x] Launch the app on `http://127.0.0.1:3000` and verify the login page responds.
 
+## Milestone 5 — Login and request feedback
+
+- [x] Replace the two login forms with a responsive Student/Teacher toggle and username fields.
+- [x] Add spinners, disabled controls, error feedback, and duplicate-submit guards to every action form.
+- [x] Add route loading states and make autosave/submission status reliable.
+- [x] Batch final answer writes and avoid unnecessary login database updates.
+- [x] Verify build, slow-request behavior, role switching, autosave ordering, and local launch.
+
+**Checkpoint:** Production build and nine automated tests pass. Browser verification covers desktop/mobile login, plain usernames, disabled controls during sign-in, and teacher-tab retention after a failed login. A live Prisma check using the largest deployed sample (five questions) verified batch grading, duplicate submission, late-autosave protection, and retained attempt history; temporary records were removed. Remote database latency still affects request duration; all user-triggered requests now have visible progress.
+
+## Milestone 6 — Consistent portals, topic library, and submission trash
+
+- [x] Index the three local mathematics textbooks and establish shared Math/English topic IDs.
+- [x] Group the teaching library and assignment picker by subject and topic.
+- [x] Extend the landing-page design across both portals and stack English reading above questions.
+- [x] Add recoverable submission trash, restore controls, and filtering from student views/reports.
+- [ ] Apply the additive database migration and verify trash/restore and replacement attempts.
+- [ ] Verify desktop/mobile layouts, contained passage scrolling, automated tests, and production build.
+- [ ] Relaunch the local app with the completed changes.
+
+**Checkpoint:** Implementation complete; integration and browser checks in progress.
+
 ## Operating rules
 
 - Source-controlled TypeScript content is bundled into each deployment. Published versions are append-only while referenced by assignments or attempts.

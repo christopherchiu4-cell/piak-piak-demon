@@ -98,9 +98,11 @@ model Attempt {
   status       AttemptStatus @default(IN_PROGRESS)
   startedAt    DateTime      @default(now())
   submittedAt  DateTime?
+  deletedAt    DateTime?
   responses    Response[]
 
   @@unique([assignmentId, number])
+  @@index([deletedAt])
 }
 
 model Response {

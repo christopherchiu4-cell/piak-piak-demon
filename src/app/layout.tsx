@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./styles.css";
+import "./interaction.css";
+import "./portal.css";
+import "./login.css";
 
 export const metadata: Metadata = {
   title: "Tutor Desk",

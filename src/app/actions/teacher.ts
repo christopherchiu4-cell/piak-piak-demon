@@ -114,10 +114,10 @@ export async function reopenAssignment(formData: FormData) {
 }
 
 export async function gradeWritten(formData: FormData) {
-  await requireRole("TEACHER");
+  const teacher = await requireRole("TEACHER");
   const responseId = field(formData, "responseId");
   const response = await db.response.findUnique({ where: { id: responseId }, include: { attempt: { include: { assignment: true } } } });
-  if (!response || response.attempt.status !== "SUBMITTED") throw new Error("Submitted response not found.");
+  if (!response || response.attempt.status !== "SUBMITTED" || response.attempt.deletedAt || response.attempt.assignment.teacherId !== teacher.id) throw new Error("Submitted response not found.");
   const activity = getActivity(response.attempt.assignment.contentKey, response.attempt.assignment.contentVersion);
   const question = activity?.questions.find((item) => item.id === response.questionId);
   if (!question || question.type !== "written") throw new Error("Only written responses can be graded here.");
@@ -128,4 +128,24 @@ export async function gradeWritten(formData: FormData) {
   } });
   revalidatePath(`/teacher/assignments/${response.attempt.assignmentId}`);
   revalidatePath(`/student/assignments/${response.attempt.assignmentId}`);
+}
+
+export async function trashSubmission(formData: FormData) {
+  const teacher = await requireRole("TEACHER");
+  await db.attempt.updateMany({
+    where: { id: field(formData, "attemptId"), status: "SUBMITTED", deletedAt: null, assignment: { teacherId: teacher.id } },
+    data: { deletedAt: new Date() },
+  });
+  revalidatePath("/teacher", "layout");
+  revalidatePath("/student", "layout");
+}
+
+export async function restoreSubmission(formData: FormData) {
+  const teacher = await requireRole("TEACHER");
+  await db.attempt.updateMany({
+    where: { id: field(formData, "attemptId"), status: "SUBMITTED", deletedAt: { not: null }, assignment: { teacherId: teacher.id } },
+    data: { deletedAt: null },
+  });
+  revalidatePath("/teacher", "layout");
+  revalidatePath("/student", "layout");
 }
