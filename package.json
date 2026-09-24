@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:bootstrap": "node --import tsx prisma/bootstrap.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:migrate-content": "node --import tsx prisma/migrate-content.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

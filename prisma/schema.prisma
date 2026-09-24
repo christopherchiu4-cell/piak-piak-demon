@@ -17,8 +17,8 @@ enum Subject {
   ENGLISH
 }
 
-enum ActivityKind {
-  CLASSWORK
+enum MaterialKind {
+  CLASS_PLAN
   HOMEWORK
 }
 
@@ -28,19 +28,21 @@ enum AttemptStatus {
 }
 
 model User {
-  id                  String        @id @default(cuid())
-  login               String        @unique
-  displayName         String
-  role                Role
-  credentialHash      String
-  active              Boolean       @default(true)
-  failedLogins        Int           @default(0)
-  lockedUntil         DateTime?
-  createdAt           DateTime      @default(now())
-  sessions            LoginSession[]
-  studentAssignments  Assignment[]  @relation("StudentAssignments")
-  teacherAssignments  Assignment[]  @relation("TeacherAssignments")
-  classes             ClassSession[]
+  id                 String         @id @default(cuid())
+  login              String         @unique
+  displayName        String
+  role               Role
+  credentialHash     String
+  accessCode         String?
+  active             Boolean        @default(true)
+  archivedAt         DateTime?
+  failedLogins       Int            @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime       @default(now())
+  sessions           LoginSession[]
+  studentAssignments Assignment[]   @relation("StudentAssignments")
+  teacherAssignments Assignment[]   @relation("TeacherAssignments")
+  materials          Material[]     @relation("MaterialAuthor")
 }
 
 model LoginSession {
@@ -54,40 +56,60 @@ model LoginSession {
   @@index([userId])
 }
 
-model ClassSession {
-  id               String       @id @default(cuid())
-  studentId        String
-  student          User         @relation(fields: [studentId], references: [id])
-  startsAt         DateTime
-  title            String
-  planKey          String
-  planVersion      Int
-  notes            String       @default("") @db.Text
-  notesPublishedAt DateTime?
-  createdAt        DateTime     @default(now())
-  assignments      Assignment[]
+/// A reusable template. Class plans are scheduled for a date; homework is assigned with a due date.
+model Material {
+  id          String       @id @default(cuid())
+  kind        MaterialKind
+  subject     Subject
+  title       String
+  summary     String       @default("") @db.Text
+  topicIds    String[]     @default([])
+  blocks      Json
+  version     Int          @default(1)
+  authorId    String
+  author      User         @relation("MaterialAuthor", fields: [authorId], references: [id])
+  archivedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments Assignment[]
+
+  @@index([kind, archivedAt])
 }
 
+/// One material handed to one student. `blocks` is a snapshot taken at assign time,
+/// so editing or archiving the source material can never corrupt submitted work.
 model Assignment {
-  id             String        @id @default(cuid())
-  studentId      String
-  student        User          @relation("StudentAssignments", fields: [studentId], references: [id])
-  teacherId      String
-  teacher        User          @relation("TeacherAssignments", fields: [teacherId], references: [id])
-  classSessionId String?
-  classSession   ClassSession? @relation(fields: [classSessionId], references: [id])
-  contentKey     String
-  contentVersion Int
-  kind           ActivityKind
-  subject        Subject
-  availableAt    DateTime      @default(now())
-  dueAt          DateTime?
-  maxAttempts    Int           @default(1)
-  createdAt      DateTime      @default(now())
-  attempts       Attempt[]
+  id                String       @id @default(cuid())
+  studentId         String
+  student           User         @relation("StudentAssignments", fields: [studentId], references: [id])
+  teacherId         String
+  teacher           User         @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  materialId        String?
+  material          Material?    @relation(fields: [materialId], references: [id])
+  materialVersion   Int          @default(1)
+  kind              MaterialKind
+  subject           Subject
+  title             String
+  summary           String       @default("") @db.Text
+  blocks            Json
+  availableAt       DateTime     @default(now())
+  scheduledAt       DateTime?
+  dueAt             DateTime?
+  attendedAt        DateTime?
+  maxAttempts       Int          @default(1)
+  notes             String       @default("") @db.Text
+  notesPublishedAt  DateTime?
+  archivedAt        DateTime?
+  classAssignmentId String?
+  classAssignment   Assignment?  @relation("ClassWork", fields: [classAssignmentId], references: [id])
+  linkedWork        Assignment[] @relation("ClassWork")
+  createdAt         DateTime     @default(now())
+  attempts          Attempt[]
 
   @@index([studentId, kind, availableAt])
-  @@index([classSessionId])
+  @@index([studentId, scheduledAt])
+  @@index([studentId, dueAt])
+  @@index([classAssignmentId])
 }
 
 model Attempt {
@@ -106,16 +128,16 @@ model Attempt {
 }
 
 model Response {
-  id          String   @id @default(cuid())
-  attemptId   String
-  attempt     Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  questionId  String
-  answer      String   @default("") @db.Text
-  score       Int?
-  maxPoints   Int
-  feedback    String   @default("") @db.Text
-  reviewedAt  DateTime?
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  attemptId  String
+  attempt    Attempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  answer     String    @default("") @db.Text
+  score      Int?
+  maxPoints  Int
+  feedback   String    @default("") @db.Text
+  reviewedAt DateTime?
+  updatedAt  DateTime  @updatedAt
 
   @@unique([attemptId, questionId])
 }

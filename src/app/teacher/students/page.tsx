@@ -1,13 +1,40 @@
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { createStudent, resetStudentCode, setStudentActive } from "@/app/actions/teacher";
+import { createStudent } from "@/app/actions/teacher";
+import { CodeField } from "@/components/code-field";
+import { Modal } from "@/components/modal";
+import { StudentDirectory, type StudentRow } from "@/components/student-directory";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { Badge, PageHeading } from "@/components/ui";
+import { PageHeading } from "@/components/ui";
 
 export default async function StudentsPage() {
   await requireRole("TEACHER");
-  const students = await db.user.findMany({ where: { role: "STUDENT" }, orderBy: { createdAt: "asc" } });
-  return <><PageHeading eyebrow="Access management" title="Students">Create a private login, reset its code, or pause access.</PageHeading>
-    <div className="two-column"><section className="card"><h2>Add student</h2><ActionForm action={createStudent} className="form-stack"><label>Student name<input name="displayName" required /></label><label>Username<input name="login" minLength={3} required autoCapitalize="none" /></label><label>Private code<input name="code" type="text" minLength={8} required autoComplete="off" /></label><SubmitButton className="button primary" pendingLabel="Creating…">Create access</SubmitButton></ActionForm><p className="hint">Share the username and code privately. Codes are stored as hashes and cannot be viewed later.</p></section><section className="card"><h2>Current students</h2>{students.length ? students.map((student) => <div className="student-management" key={student.id}><div className="row-between"><div><strong>{student.displayName}</strong><p className="muted">Username: {student.login}</p></div><Badge tone={student.active ? "green" : "amber"}>{student.active ? "Active" : "Paused"}</Badge></div><ActionForm action={resetStudentCode} className="inline-form"><input type="hidden" name="studentId" value={student.id} /><label>New code<input name="code" type="text" minLength={8} required autoComplete="off" /></label><SubmitButton className="button secondary" pendingLabel="Resetting…">Reset code</SubmitButton></ActionForm><ActionForm action={setStudentActive}><input type="hidden" name="studentId" value={student.id} /><SubmitButton className="text-button" pendingLabel="Updating…">{student.active ? "Pause access" : "Restore access"}</SubmitButton></ActionForm></div>) : <p className="muted">No student account yet.</p>}</section></div>
+  const students = await db.user.findMany({
+    where: { role: "STUDENT" },
+    orderBy: [{ archivedAt: "asc" }, { displayName: "asc" }],
+    include: { _count: { select: { studentAssignments: true } } },
+  });
+  // Dates are serialised for the client component; it re-hydrates them for display.
+  const rows: StudentRow[] = students.map((student) => ({
+    id: student.id, displayName: student.displayName, login: student.login,
+    accessCode: student.accessCode, active: student.active,
+    archivedAt: student.archivedAt?.toISOString() ?? null,
+    createdAt: student.createdAt.toISOString(),
+    assignedCount: student._count.studentAssignments,
+  }));
+
+  return <>
+    <div className="row-between page-heading-row">
+      <PageHeading eyebrow="People" title="Students">Add a student, open one to see their progress, or manage their access.</PageHeading>
+      <Modal label="Add student" title="Add a student" className="button primary" description="They sign in with this username and code.">
+        <ActionForm action={createStudent} className="form-stack" closeOnSuccess successMessage="Student added.">
+          <label className="field">Student name<input name="displayName" required autoFocus /></label>
+          <label className="field">Username<input name="login" minLength={3} required autoCapitalize="none" autoComplete="off" placeholder="lowercase, no spaces" /></label>
+          <CodeField />
+          <SubmitButton className="button primary" pendingLabel="Creating…">Create access</SubmitButton>
+        </ActionForm>
+      </Modal>
+    </div>
+    <StudentDirectory students={rows} />
   </>;
 }

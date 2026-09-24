@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getActivity } from "@/content/catalog";
+import { questionBlocks } from "@/content/blocks";
 import { requireRole } from "@/lib/auth";
+import { readBlocks } from "@/lib/blocks";
 import { db } from "@/lib/db";
-import { gradeQuestion } from "@/lib/grading";
+import { gradeBlock } from "@/lib/grading";
 
 async function authorizedAttempt(attemptId: string, studentId: string) {
   const attempt = await db.attempt.findUnique({ where: { id: attemptId }, include: { assignment: true } });
@@ -34,8 +35,7 @@ export async function saveResponse(attemptId: string, questionId: string, answer
   const student = await requireRole("STUDENT");
   const attempt = await authorizedAttempt(attemptId, student.id);
   if (attempt.status !== "IN_PROGRESS") return { saved: false };
-  const activity = getActivity(attempt.assignment.contentKey, attempt.assignment.contentVersion);
-  const question = activity?.questions.find((item) => item.id === questionId);
+  const question = questionBlocks(readBlocks(attempt.assignment.blocks)).find((item) => item.id === questionId);
   if (!question) throw new Error("Question not found.");
   if (answer.length > 20000) throw new Error("Answer is too long.");
   return db.$transaction(async (tx) => {
@@ -55,8 +55,7 @@ export async function submitAttempt(attemptId: string, submittedAnswers: Record<
   const student = await requireRole("STUDENT");
   const attempt = await authorizedAttempt(attemptId, student.id);
   if (attempt.status !== "IN_PROGRESS") redirect(`/student/assignments/${attempt.assignmentId}?attempt=${attemptId}`);
-  const activity = getActivity(attempt.assignment.contentKey, attempt.assignment.contentVersion);
-  if (!activity) throw new Error("Published content version is missing from this deployment.");
+  const questions = questionBlocks(readBlocks(attempt.assignment.blocks));
   await db.$transaction(async (tx) => {
     const updated = await tx.attempt.updateMany({ where: { id: attemptId, status: "IN_PROGRESS" }, data: {
       status: "SUBMITTED", submittedAt: new Date(),
@@ -64,10 +63,10 @@ export async function submitAttempt(attemptId: string, submittedAnswers: Record<
     if (updated.count !== 1) return;
     const existing = await tx.response.findMany({ where: { attemptId } });
     const previous = new Map(existing.map((response) => [response.questionId, response.answer]));
-    const responses = activity.questions.map((question) => {
+    const responses = questions.map((question) => {
       const incoming = submittedAnswers[question.id];
       const answer = (typeof incoming === "string" ? incoming : previous.get(question.id) ?? "").slice(0, 20000);
-      const score = gradeQuestion(question, answer);
+      const score = gradeBlock(question, answer);
       return { attemptId, questionId: question.id, answer, score, maxPoints: question.points };
     });
     // Finalize this attempt's draft answers in one batch, atomically with submission.

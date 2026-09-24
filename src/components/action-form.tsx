@@ -4,10 +4,11 @@ import { createContext, useContext, useRef, useState, useTransition, type Button
 import { unstable_rethrow } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Spinner } from "./loading-indicator";
+import { useModalClose } from "./modal-context";
 
 const FormContext = createContext({ pending: false, submitter: "" });
 
-export function ActionForm({ action, children, className, successMessage = "Changes saved.", confirmMessage, feedbackPlacement = "inline", errorMessage = "We couldn’t complete that request. Your entries are still here. Check your connection and try again." }: {
+export function ActionForm({ action, children, className, successMessage = "Changes saved.", confirmMessage, feedbackPlacement = "inline", errorMessage = "We couldn’t complete that request. Your entries are still here. Check your connection and try again.", closeOnSuccess = false }: {
   action: (data: FormData) => Promise<void>;
   children: ReactNode;
   className?: string;
@@ -15,7 +16,9 @@ export function ActionForm({ action, children, className, successMessage = "Chan
   confirmMessage?: string;
   feedbackPlacement?: "inline" | "toast";
   errorMessage?: string;
+  closeOnSuccess?: boolean;
 }) {
+  const closeModal = useModalClose();
   const [pending, startTransition] = useTransition();
   const locked = useRef(false);
   const [submitter, setSubmitter] = useState("");
@@ -38,6 +41,7 @@ export function ActionForm({ action, children, className, successMessage = "Chan
       try {
         await action(data);
         setMessage(successMessage);
+        if (closeOnSuccess) closeModal?.();
       } catch (error) {
         unstable_rethrow(error);
         setFailed(true);

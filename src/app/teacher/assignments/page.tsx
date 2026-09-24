@@ -1,23 +1,55 @@
-import { ContentPicker } from "@/components/content-picker";
-import { ActionForm, SubmitButton } from "@/components/action-form";
-import Link from "@/components/pending-link";
-import { createAssignment } from "@/app/actions/teacher";
-import { activities, getActivity } from "@/content/catalog";
-import { db } from "@/lib/db";
+import { AssignmentBoard, type BoardRow } from "@/components/assignment-board";
+import { AssignPanel } from "@/components/assign-panel";
+import { Modal } from "@/components/modal";
+import { isAssignable, questionBlocks, totalPoints } from "@/content/blocks";
+import { readBlocks } from "@/lib/blocks";
 import { requireRole } from "@/lib/auth";
-import { Badge, PageHeading, dateLabel } from "@/components/ui";
+import { db } from "@/lib/db";
+import { PageHeading } from "@/components/ui";
 
-export default async function AssignmentsPage({ searchParams }: { searchParams: Promise<{ classSessionId?: string; subject?: string; topic?: string }> }) {
+export default async function AssignmentsPage() {
   await requireRole("TEACHER");
-  const query = await searchParams;
-  const selectedClass = query.classSessionId;
-  const [students, classes, assignments] = await Promise.all([
-    db.user.findMany({ where: { role: "STUDENT", active: true }, orderBy: { displayName: "asc" } }),
-    db.classSession.findMany({ orderBy: { startsAt: "desc" } }),
-    db.assignment.findMany({ include: { student: true, attempts: { where: { deletedAt: null } } }, orderBy: { createdAt: "desc" } }),
+  const [students, materials, assignments] = await Promise.all([
+    db.user.findMany({ where: { role: "STUDENT", active: true, archivedAt: null }, orderBy: { displayName: "asc" } }),
+    db.material.findMany({ where: { archivedAt: null }, orderBy: { createdAt: "desc" } }),
+    db.assignment.findMany({
+      where: { archivedAt: null }, orderBy: { createdAt: "desc" }, take: 500,
+      include: { student: true, attempts: { where: { deletedAt: null } } },
+    }),
   ]);
-  return <><PageHeading eyebrow="Assign work" title="Assignments">Choose a topic and activity for homework or classwork. Each new assignment starts with one allowed attempt.</PageHeading>
-    <div className="two-column"><section className="card"><h2>New assignment</h2><ActionForm action={createAssignment} className="form-stack"><label>Student<select name="studentId" required>{students.map((student) => <option key={student.id} value={student.id}>{student.displayName}</option>)}</select></label><ContentPicker activities={activities.map((item) => ({ key: item.key, version: item.version, title: item.title, subject: item.subject, topicIds: item.topicIds, questionCount: item.questions.length }))} initialSubject={query.subject === "ENGLISH" ? "ENGLISH" : "MATH"} initialTopic={query.topic ?? ""} /><label>Work type<select name="kind"><option value="HOMEWORK">Homework</option><option value="CLASSWORK">Classwork</option></select></label><label>Related class (optional)<select name="classSessionId" defaultValue={selectedClass ?? ""}><option value="">No class link</option>{classes.map((item) => <option value={item.id} key={item.id}>{item.title} · {dateLabel(item.startsAt)}</option>)}</select></label><label>Due date (optional)<input type="datetime-local" name="dueAt" /></label><SubmitButton className="button primary" disabled={!students.length} pendingLabel="Assigning…">Assign activity</SubmitButton></ActionForm>{!students.length && <p className="hint">Create a student account before assigning work.</p>}</section>
-    <section className="card"><h2>Assigned work</h2>{assignments.length ? <div className="list">{assignments.map((item) => <Link key={item.id} href={`/teacher/assignments/${item.id}`} className="list-row"><span><strong>{getActivity(item.contentKey, item.contentVersion)?.title ?? "Missing content"}</strong><small>{item.student.displayName} · {item.kind === "HOMEWORK" ? "Homework" : "Classwork"} · {dateLabel(item.createdAt)}</small></span><Badge tone={item.attempts.some((attempt) => attempt.status === "SUBMITTED") ? "green" : "blue"}>{item.attempts.filter((attempt) => attempt.status === "SUBMITTED").length} submitted</Badge></Link>)}</div> : <p className="muted">No assignments yet.</p>}</section></div>
+
+  const rows: BoardRow[] = assignments.map((item) => ({
+    id: item.id, title: item.title, kind: item.kind, subject: item.subject,
+    studentId: item.studentId, studentName: item.student.displayName,
+    scheduledAt: item.scheduledAt?.toISOString() ?? null,
+    dueAt: item.dueAt?.toISOString() ?? null,
+    createdAt: item.createdAt.toISOString(),
+    attendedAt: item.attendedAt?.toISOString() ?? null,
+    submitted: item.attempts.some((attempt) => attempt.status === "SUBMITTED"),
+    started: item.attempts.length > 0,
+  }));
+
+  // `ready` mirrors what assignHomework enforces, so a draft is visible before submitting.
+  const toOption = (material: (typeof materials)[number]) => {
+    const blocks = readBlocks(material.blocks);
+    return {
+      id: material.id, title: material.title, summary: material.summary, subject: material.subject,
+      ready: isAssignable(blocks), questionCount: questionBlocks(blocks).length, points: totalPoints(blocks),
+      createdAt: material.createdAt.toISOString(),
+    };
+  };
+
+  return <>
+    <div className="row-between page-heading-row">
+      <PageHeading eyebrow="Scheduling" title="Assignments">What is coming up, across every student.</PageHeading>
+      <Modal label="Assign" title="Assign work" className="button primary" wide description="Pick what to give, and to whom.">
+        <AssignPanel
+          students={students.map((student) => ({ id: student.id, displayName: student.displayName }))}
+          homework={materials.filter((item) => item.kind === "HOMEWORK").map(toOption)}
+          plans={materials.filter((item) => item.kind === "CLASS_PLAN").map(toOption)}
+        />
+      </Modal>
+    </div>
+    <AssignmentBoard rows={rows} />
   </>;
 }

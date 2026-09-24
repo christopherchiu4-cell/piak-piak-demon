@@ -1,0 +1,15 @@
+type,prompt,text,title,topic,points,options,correct,accepted,rubric,explanation
+heading,,This week: inference and figurative language,,,,,,,,
+text,,"One hour. Read the passage aloud together, then discuss what the writer shows without saying directly.",,,,,,,,
+heading,,Key idea,,,,,,,,
+text,,"An inference is a conclusion drawn from clues in the text. Good answers use the pattern: I think... because the text says...",,,,,,,,
+passage,,"Maya pressed her face to the rain-streaked window. The bus was twenty minutes late, and the empty seat beside her felt enormous.
+
+When her phone buzzed, she snatched it up so quickly that it nearly slipped from her fingers. Then she read the message and slowly set the phone face-down on her knee.
+
+Outside, the streetlights blinked on one by one, like a row of tired eyes.",The late bus,,,,,,,
+heading,,Discuss together,,,,,,,,
+mcq,"Which phrase is a simile?",,,Figurative language,1,rain-streaked window|the empty seat beside her felt enormous|like a row of tired eyes|snatched it up,like a row of tired eyes,,,A simile compares using 'like' or 'as'.
+short,What can you infer about the message Maya received? Use evidence from the passage.,,,Inference,3,,,,Makes a clear inference (bad news or disappointment)|Quotes 'slowly set the phone face-down'|Contrasts with how quickly she grabbed the phone,"Her eager grab turns into a slow, face-down placement, suggesting disappointment."
+heading,,Wrap-up,,,,,,,,
+text,,Student writes their own simile describing the weather today.,,,,,,,,

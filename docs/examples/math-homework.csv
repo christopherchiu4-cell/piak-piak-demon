@@ -1,0 +1,12 @@
+type,prompt,text,title,topic,points,options,correct,accepted,rubric,explanation
+heading,,Part A: fractions and percentages,,,,,,,,
+text,,"Show your working on paper, then enter each answer. No calculator.",,,,,,,,
+mcq,Which of these is the largest?,,,Comparing fractions,1,1/2|3/5|5/8|0.55,5/8,,,"As decimals: 0.5, 0.6, 0.625, 0.55. So 5/8 is largest."
+mcq,What is 25% of 80?,,,Percentage of an amount,1,15|20|25|40,2,,,25% is one quarter; 80 ÷ 4 = 20.
+fill,Simplify 12/18 to {{1}}/{{2}}.,,,Simplifying fractions,2,,,2|3,,Divide top and bottom by the highest common factor 6.
+fill,0.35 as a fraction in its simplest form is {{1}}.,,,Decimals to fractions,1,,,7/20,,0.35 = 35/100 = 7/20.
+fill,1/2 + 1/3 = {{1}},,,Adding fractions,1,,,5/6,,Use a common denominator of 6: 3/6 + 2/6 = 5/6.
+heading,,Part B: problem solving,,,,,,,,
+mcq,A £60 jacket is reduced by 15%. What is the sale price?,,,Percentage change,2,£45|£51|£54|£9,£51,,,15% of 60 is 9; 60 − 9 = 51.
+fill,"A class has 30 pupils and 18 are girls. The percentage of girls is {{1}}%, and the fraction of boys in simplest form is {{2}}.",,,Fractions to percentages,2,,,60|2/5,,"18/30 = 60%; 12 boys out of 30 = 2/5."
+short,Sam says 20% of 50 is the same as 50% of 20. Is Sam right? Explain.,,,Reasoning,3,,,,States Sam is right|Shows both equal 10|Explains that multiplication can be done in either order,"Both are 0.2 × 50 = 0.5 × 20 = 10."

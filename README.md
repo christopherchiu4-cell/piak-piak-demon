@@ -1,6 +1,6 @@
 # Tutor Desk
 
-A Next.js tutoring portal with separate teacher and student views for Math and English. Class plans, classwork, and homework are separate student sections. PostgreSQL stores account access, class sessions, assignments, attempts, answers, scores, teacher feedback, and after-lesson notes.
+A Next.js tutoring portal with separate teacher and student views for Math and English. The teacher builds reusable **class plans** and **homework** from editable blocks, then schedules or assigns them to a student. PostgreSQL stores accounts, materials, assignments, attempts, answers, scores, teacher feedback, and after-lesson notes.
 
 ## Requirements
 
@@ -16,44 +16,64 @@ A Next.js tutoring portal with separate teacher and student views for Math and E
    - `TEACHER_LOGIN`: teacher username.
    - `TEACHER_PASSWORD`: initial teacher password (10 or more characters; a longer password is recommended).
 2. Run `pnpm install`.
-3. Run `pnpm db:deploy` to apply the checked-in initial migration.
+3. Run `pnpm db:deploy` to apply the checked-in migrations.
 4. Run `pnpm db:bootstrap` to create the teacher account. This does not change an existing teacher password.
 5. Run `pnpm dev` and open `http://localhost:3000`.
 
-The `.env` file and generated Prisma client are ignored by Git. The same `DATABASE_URL` and `DIRECT_URL` must be configured as private environment variables on the serverless host. Run `pnpm db:deploy` for each database migration before deploying app code that depends on it. Do not run migrations as part of every serverless request.
+### Upgrading a database created before 2026-09-24
+
+Only relevant to a database that already holds assignments from the old
+source-code content. `20260924_materials` is additive; `20260924_drop_legacy_content`
+removes the legacy pointers. The one-off backfill has to run between them, and
+`prisma migrate deploy` applies every pending migration in one pass, so the two
+migrations must be separated by hand:
+
+```
+psql "$DIRECT_URL" -f prisma/migrations/20260924_materials/migration.sql
+npx prisma migrate resolve --applied 20260924_materials
+pnpm db:migrate-content
+pnpm db:deploy
+```
+
+The backfill aborts if an assignment points at content it cannot find, and afterwards
+verifies that every recorded answer still resolves to a question block. A brand-new
+database needs none of this — plain `pnpm db:deploy` is correct, because there is
+nothing to back up.
+
+Once the backfill has run in every environment, delete `prisma/migrate-content.ts`,
+`src/content/legacy.ts`, `tests/legacy-migration.test.ts`, and
+`src/content/{schema,catalog,math,english,plans}.ts`.
 
 ## Daily teacher workflow
 
-1. Sign in and create the student's username and private code under **Students**.
-2. Schedule a class using a deployed class plan. The student sees the plan before class.
-3. Assign a deployed activity as **Classwork** or **Homework**, optionally linking it to the class.
-4. Save after-lesson notes as a draft, then publish them from the class page. These text notes are stored in PostgreSQL and do not need a redeploy.
-5. Review submitted attempts, grade written answers, and inspect **Progress** by subject and topic.
-6. To allow another attempt, use **Allow another attempt**. Previous attempts remain available.
-7. Use **Move to Trash** on a submitted attempt to hide it from the student and reports. Restore it from **Trash**. Trashed attempts do not use an attempt slot; replacements receive a new number, and restoration retains both histories.
+The teacher portal has five tabs: **Overview, Students, Class plans, Homework, Assignments.**
 
-## Publishing new instructional content
+1. **Students** — add a student from the "Add student" dialog. Generate an access code or type one. Each row's ••• menu shows the code again, resets it, pauses access, or deletes the student. Deleting is reversible: the record and all past work are kept under "deleted students".
+2. **Class plans** and **Homework** — create a material and edit it in the block editor. Blocks are: heading, text, passage, multiple choice, short answer, and fill in the blank. Every editor button saves your work before it acts, so reordering or adding a block never loses what you typed. A homework must be free of problems before it can be assigned; the badge at the top tells you.
+3. **Assignments** — assign homework to a student with a due date, or schedule a class plan for a date and time.
+4. Open a class to save after-lesson notes as a draft, then publish them. Drafts stay private to you.
+5. **Overview** lists everything waiting on you: submitted short answers to mark, upcoming classes, and outstanding homework.
+6. Click a student to see their full record: attendance, homework scores, strengths by topic, and anything sitting in the bin.
 
-1. Read `context/README.md` for the textbook index and choose `topicIds` from `src/content/topics.ts`. Add a new typed activity or class plan in `src/content/`. The existing files are examples of the required structure.
-2. Register it in `src/content/catalog.ts`. Use a stable `key` and increment `version` when changing published content.
-3. Keep old versions in the catalog while assignments or attempts refer to them.
-4. Run `pnpm test` and `pnpm build`, then redeploy the app. The teacher's **Content** page previews what that deployment contains. There is no runtime content import or media storage.
+Multiple choice and fill in the blank are scored on submission; fill in the blank gives partial credit per blank and accepts numeric equivalents (`24.0` matches `24`). Short answers stay pending until you mark them. Blank answers score zero. Students see explanations immediately after submitting.
 
-Multiple-choice and numeric questions are scored on submission. Written answers with content remain pending until teacher review; blank answers receive zero. The student sees explanations immediately after submission. Scores update after written grading.
+## How assigned content is versioned
 
-The teaching library and assignment picker group activities by Subject → Topic. Empty topic groups provide a place for future content. English uses a tutor-defined taxonomy until reference texts are added.
+Assigning or scheduling takes a **snapshot** of the material's blocks onto the assignment. Editing or deleting a material afterwards never changes work that is already out, and never breaks a submitted attempt. If nothing has been attempted yet, the assignment page offers to pull in the newer version.
 
 ## Project map
 
-- `src/content/`: versioned instructional content and validation
+- `src/content/blocks.ts`: block schema and validation
+- `src/content/topics.ts`: topic taxonomy offered in the editor
 - `src/app/teacher/`: teacher portal
 - `src/app/student/`: student portal
 - `src/app/actions/`: authenticated server mutations
 - `src/lib/grading.ts`: scoring and privacy-safe student question data
+- `src/lib/block-form.ts`: parses the block editor's form and applies structural edits
 - `prisma/schema.prisma`: database model
 - `prisma/migrations/`: versioned PostgreSQL migrations
 - `PROJECT_PLAN.md`: milestones and checkpoints
 
 ## Security and privacy
 
-Only the server connects to PostgreSQL. Teacher passwords and student codes are hashed with scrypt; login sessions use an HTTP-only cookie and a hashed token in the database. Server actions recheck account role and assignment ownership. Answer keys and explanations are omitted from the active student question payload. The initial implementation supports one teacher and one student but stores explicit ownership relationships so additional students can be added later.
+Only the server connects to PostgreSQL. Teacher passwords are hashed with scrypt and login sessions use an HTTP-only cookie with a hashed token. Student access codes are hashed **and** stored in plain text so the teacher can look one up later; this is a deliberate trade for a single-teacher install, and it means database access exposes student codes. Deleting a student ends their sessions and blocks sign-in. Server actions recheck account role and assignment ownership. Answer keys and explanations are omitted from the active student question payload. The initial implementation supports one teacher and one student but stores explicit ownership relationships so additional students can be added later.

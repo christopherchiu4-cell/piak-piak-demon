@@ -14,7 +14,7 @@ export const currentUser = cache(async () => {
   const session = await db.loginSession.findUnique({
     where: { tokenHash: hashToken(token) }, include: { user: true },
   });
-  if (!session || session.expiresAt < new Date() || !session.user?.active) return null;
+  if (!session || session.expiresAt < new Date() || !session.user?.active || session.user.archivedAt) return null;
   return session.user;
 });
 
@@ -27,7 +27,7 @@ export async function requireRole(role: "TEACHER" | "STUDENT") {
 
 export async function authenticate(login: string, credential: string, role: "TEACHER" | "STUDENT") {
   const user = await db.user.findUnique({ where: { login: login.trim().toLowerCase() } });
-  if (!user || user.role !== role || !user.active || (user.lockedUntil && user.lockedUntil > new Date())) return false;
+  if (!user || user.role !== role || !user.active || user.archivedAt || (user.lockedUntil && user.lockedUntil > new Date())) return false;
   const valid = await verifyCredential(credential, user.credentialHash);
   if (!valid) {
     const failures = user.failedLogins + 1;

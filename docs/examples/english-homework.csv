@@ -1,0 +1,15 @@
+type,prompt,text,title,topic,points,options,correct,accepted,rubric,explanation
+heading,,Reading: The Old Bookshop,,,,,,,,
+text,,Read the passage carefully. It stays beside the questions while you work.,,,,,,,,
+passage,,"The bell above the door gave a thin, cracked jingle as Leo stepped inside. Dust hung in the air like tiny floating stars, and the shelves leaned towards each other as if sharing secrets.
+
+Behind the counter sat Mrs Okafor, who had run the shop for forty years. She did not look up. ""We close in ten minutes,"" she said, turning a page.
+
+Leo hesitated. He had walked past the shop every day for a year and never once gone in. Now, clutching the crumpled note from his grandfather, he took a deep breath and walked to the counter.",The Old Bookshop,,,,,,,
+mcq,How long has Mrs Okafor run the shop?,,,Retrieval,1,Ten years|Twenty years|Forty years|One year,Forty years,,,The passage says she had run the shop for forty years.
+mcq,"""The shelves leaned towards each other as if sharing secrets"" is an example of:",,,Figurative language,1,Personification|Alliteration|Onomatopoeia|Rhyme,1,,,The shelves are given a human action: sharing secrets.
+mcq,Which word best describes how Leo feels as he walks to the counter?,,,Inference,1,Bored|Nervous but determined|Angry|Relaxed,Nervous but determined,,,"He hesitates and takes a deep breath, but still walks forward."
+heading,,Vocabulary and grammar,,,,,,,,
+fill,"The word ""clutching"" means holding something {{1}}.",,,Vocabulary,1,,,tightly;firmly;tight;hard,,To clutch is to grip tightly.
+fill,"The plural of ""shelf"" is {{1}} and the plural of ""secret"" is {{2}}.",,,Spelling,2,,,shelves|secrets,,Words ending in -f often change to -ves.
+short,Why do you think Leo's grandfather gave him a note? Use evidence from the passage.,,,Inference,3,,,,Offers a plausible reason|Refers to the crumpled note or his hesitation|Explains their thinking,"Any reasoned answer, e.g. the note asks him to find a book or meet Mrs Okafor."
