@@ -8,6 +8,7 @@ import { paginateBlocks, parseFill, serializeFill } from "@/lib/blocks";
 import { AutosaveQueue, type SaveStatus } from "@/lib/autosave";
 import { Spinner } from "./loading-indicator";
 import { ReadingPanel } from "./reading-panel";
+import { MathText } from "./math-text";
 
 type PublicMcq = Extract<PublicBlock, { type: "mcq" }>;
 type PublicFill = Extract<PublicBlock, { type: "fill" }>;
@@ -28,12 +29,12 @@ function FillAnswer({ block, answer, onChange }: { block: PublicFill; answer: st
   let found = false;
   while ((match = pattern.exec(block.prompt)) !== null) {
     found = true;
-    if (match.index > cursor) pieces.push(<span key={`t${cursor}`}>{block.prompt.slice(cursor, match.index)}</span>);
+    if (match.index > cursor) pieces.push(<MathText key={`t${cursor}`}>{block.prompt.slice(cursor, match.index)}</MathText>);
     const blank = block.blanks[Number(match[1]) - 1];
     if (blank) pieces.push(<input className="fill-input" key={blank.id} value={values[blank.id] ?? ""} onChange={(event) => update(blank.id, event.target.value)} aria-label={`Blank ${match[1]}`} />);
     cursor = match.index + match[0].length;
   }
-  if (found && cursor < block.prompt.length) pieces.push(<span key="tail">{block.prompt.slice(cursor)}</span>);
+  if (found && cursor < block.prompt.length) pieces.push(<MathText key="tail">{block.prompt.slice(cursor)}</MathText>);
   if (!found) {
     const blank = block.blanks[0];
     return <label className="answer-label">Your answer<input className="number-answer" value={blank ? values[blank.id] ?? "" : ""} onChange={(event) => blank && update(blank.id, event.target.value)} placeholder="Type your answer" /></label>;
@@ -102,12 +103,12 @@ export function AnswerSheet({ attemptId, activity, initialAnswers }: {
     <section className="card work-card">
       <div className="row-between"><p className="eyebrow">Question {index + 1} of {pages.length}{"topic" in question && question.topic ? ` · ${question.topic}` : ""}</p><span className="save-state" role="status" aria-live="polite">{(saveState === "saving" || pending) && <Spinner />}{pending ? "Submitting your answers…" : saveLabels[saveState]}{saveState === "error" && !pending && <button className="text-button" onClick={() => void queue.current?.flush()}>Retry save</button>}</span></div>
       <div className="progress" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={pages.length} aria-valuenow={answered}><div style={{ width: `${answered / pages.length * 100}%` }} /></div>
-      {page.context.map((block) => block.type === "heading" ? <h3 key={block.id}>{block.text}</h3> : block.type === "text" ? <div className="prose" key={block.id}>{block.body.split(/\n+/).map((line, position) => <p key={position}>{line}</p>)}</div> : null)}
-      {question.type !== "fill" && <h2 className="question-heading">{"prompt" in question ? question.prompt : ""}</h2>}
+      {page.context.map((block) => block.type === "heading" ? <h3 key={block.id}><MathText>{block.text}</MathText></h3> : block.type === "text" ? <div className="prose" key={block.id}>{block.body.split(/\n+/).map((line, position) => <p key={position}><MathText>{line}</MathText></p>)}</div> : null)}
+      {question.type !== "fill" && <h2 className="question-heading"><MathText>{"prompt" in question ? question.prompt : ""}</MathText></h2>}
       <fieldset className="answer-controls" disabled={pending || saveState === "closed"}><legend className="sr-only">Your response</legend>
         {question.type === "mcq" && question.numberLine && <NumberLine line={question.numberLine} />}
-        {question.type === "mcq" && <fieldset className="choice-list"><legend className="sr-only">Choose one answer</legend>{question.options.map((option) => <label className={`choice ${current === option.id ? "selected" : ""}`} key={option.id}><input type="radio" name={question.id} value={option.id} checked={current === option.id} onChange={() => change(question.id, option.id)} /><span>{option.text}</span></label>)}</fieldset>}
-        {question.type === "fill" && <><h2 className="question-heading sr-only">{question.prompt}</h2><FillAnswer block={question} answer={current} onChange={(value) => change(question.id, value)} /></>}
+        {question.type === "mcq" && <fieldset className="choice-list"><legend className="sr-only">Choose one answer</legend>{question.options.map((option) => <label className={`choice ${current === option.id ? "selected" : ""}`} key={option.id}><input type="radio" name={question.id} value={option.id} checked={current === option.id} onChange={() => change(question.id, option.id)} /><span><MathText>{option.text}</MathText></span></label>)}</fieldset>}
+        {question.type === "fill" && <><h2 className="question-heading sr-only"><MathText>{question.prompt}</MathText></h2><FillAnswer block={question} answer={current} onChange={(value) => change(question.id, value)} /></>}
         {question.type === "short" && <label className="answer-label">Your response<textarea rows={10} value={current} onChange={(event) => change(question.id, event.target.value)} placeholder="Write your response here…" /><small>Your tutor will review and score this response.</small></label>}
       </fieldset>
       <div className="question-navigation"><button className="button secondary" onClick={() => setIndex(Math.max(0, index - 1))} disabled={index === 0 || pending}>Previous</button><button className="button primary" onClick={() => setIndex(Math.min(pages.length - 1, index + 1))} disabled={index === pages.length - 1 || pending}>Next</button></div>

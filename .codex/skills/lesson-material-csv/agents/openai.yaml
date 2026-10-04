@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lesson Material CSV"
+  short_description: "Build concise Grade 7 Math and English CSVs"
+  default_prompt: "Use $lesson-material-csv to prepare concise Grade 7 Math and English Tutor Desk CSVs after asking the six required questions."

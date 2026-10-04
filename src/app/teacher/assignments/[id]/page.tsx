@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { summaryByTopic } from "@/lib/grading";
 import { Badge, EmptyState, PageHeading, dateLabel } from "@/components/ui";
+import { MathText } from "@/components/math-text";
 
 export default async function AssignmentDetail({ params }: { params: Promise<{ id: string }> }) {
   const teacher = await requireRole("TEACHER");
@@ -92,15 +93,15 @@ export default async function AssignmentDetail({ params }: { params: Promise<{ i
             : question.type === "short" ? `${response.score}/${question.points}`
             : response.score === question.points ? "Correct" : response.score > 0 ? `${response.score}/${question.points}` : "Incorrect";
           return <article className="card review-item" key={question.id}>
-            <div className="row-between"><h3>{index + 1}. {question.type === "fill" ? fillSegments(question).map((segment, position) => "text" in segment ? <span key={position}>{segment.text}</span> : <span className="blank-slot" key={position}>____</span>) : question.prompt}</h3>
+            <div className="row-between"><h3>{index + 1}. {question.type === "fill" ? fillSegments(question).map((segment, position) => "text" in segment ? <MathText key={position}>{segment.text}</MathText> : <span className="blank-slot" key={position}>____</span>) : <MathText>{question.prompt}</MathText>}</h3>
               <Badge tone={response?.score == null ? "amber" : response.score === question.points ? "green" : "neutral"}>{result}</Badge></div>
             <p className="hint">{question.topic || "General"}</p>
-            <p><strong>Student answer</strong></p><div className="answer-box">{studentAnswer}</div>
+            <p><strong>Student answer</strong></p><div className="answer-box"><MathText>{studentAnswer}</MathText></div>
             {attempt.status === "SUBMITTED" && <>
-              {correctAnswer && <p><strong>Correct answer:</strong> {correctAnswer}</p>}
-              {question.explanation && <p><strong>Explanation:</strong> {question.explanation}</p>}
+              {correctAnswer && <p><strong>Correct answer:</strong> <MathText>{correctAnswer}</MathText></p>}
+              {question.explanation && <p><strong>Explanation:</strong> <MathText>{question.explanation}</MathText></p>}
               {question.type === "short" && <>
-                {question.rubric.length > 0 && <><p><strong>Marking criteria:</strong></p><ul>{question.rubric.map((item) => <li key={item}>{item}</li>)}</ul></>}
+                {question.rubric.length > 0 && <><p><strong>Marking criteria:</strong></p><ul>{question.rubric.map((item) => <li key={item}><MathText>{item}</MathText></li>)}</ul></>}
                 <ActionForm action={gradeWritten} className="grade-form" successMessage="Grade saved.">
                   <input type="hidden" name="responseId" value={response?.id ?? ""} />
                   <label>Score (0–{question.points})<input type="number" min="0" max={question.points} name="score" defaultValue={response?.score ?? ""} required /></label>

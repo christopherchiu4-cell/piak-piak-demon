@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy Tutor Desk"
+  short_description: "Validate and deploy Tutor Desk through GitHub"
+  default_prompt: "Use $deploy to validate the latest Tutor Desk changes, push them to GitHub main, and verify the Vercel deployment."

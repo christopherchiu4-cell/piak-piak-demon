@@ -10,6 +10,7 @@ import { studentBlocks, summaryByTopic } from "@/lib/grading";
 import { BlockView } from "@/components/block-view";
 import { AnswerSheet } from "@/components/answer-sheet";
 import { Badge, PageHeading, dateLabel } from "@/components/ui";
+import { MathText } from "@/components/math-text";
 
 export default async function StudentAssignment({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ attempt?: string }> }) {
   const student = await requireRole("STUDENT");
@@ -81,15 +82,15 @@ export default async function StudentAssignment({ params, searchParams }: { para
               ? question.blanks.map((blank, position) => `${position + 1}. ${parseFill(question, given)[blank.id] || "—"}`).join("   ") || "No answer"
               : given || "No answer";
           return <article className="card review-item" key={question.id}>
-            <div className="row-between"><h3>{index + 1}. {question.type === "fill" ? fillSegments(question).map((segment, position) => "text" in segment ? <span key={position}>{segment.text}</span> : <span className="blank-slot" key={position}>____</span>) : question.prompt}</h3>
+            <div className="row-between"><h3>{index + 1}. {question.type === "fill" ? fillSegments(question).map((segment, position) => "text" in segment ? <MathText key={position}>{segment.text}</MathText> : <span className="blank-slot" key={position}>____</span>) : <MathText>{question.prompt}</MathText>}</h3>
               <Badge tone={response?.score == null ? "amber" : response.score === question.points ? "green" : "neutral"}>{response?.score == null ? "Awaiting review" : `${response.score}/${question.points}`}</Badge></div>
             <p className="hint">{question.topic || "General"}</p>
-            <p><strong>Your answer</strong></p><div className="answer-box">{studentAnswer}</div>
-            {correct && <p><strong>Correct answer:</strong> {correct}</p>}
-            {question.explanation && <p><strong>Explanation:</strong> {question.explanation}</p>}
+            <p><strong>Your answer</strong></p><div className="answer-box"><MathText>{studentAnswer}</MathText></div>
+            {correct && <p><strong>Correct answer:</strong> <MathText>{correct}</MathText></p>}
+            {question.explanation && <p><strong>Explanation:</strong> <MathText>{question.explanation}</MathText></p>}
             {question.type === "short" && <>
-              {question.rubric.length > 0 && <><p><strong>What your tutor looks for</strong></p><ul>{question.rubric.map((item) => <li key={item}>{item}</li>)}</ul></>}
-              {response?.reviewedAt && <p className="teacher-feedback"><strong>Tutor feedback:</strong> {response.feedback || "Reviewed"}</p>}
+              {question.rubric.length > 0 && <><p><strong>What your tutor looks for</strong></p><ul>{question.rubric.map((item) => <li key={item}><MathText>{item}</MathText></li>)}</ul></>}
+              {response?.reviewedAt && <p className="teacher-feedback"><strong>Tutor feedback:</strong> <MathText>{response.feedback || "Reviewed"}</MathText></p>}
             </>}
           </article>;
         })}</div></section>

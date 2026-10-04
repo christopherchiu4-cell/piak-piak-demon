@@ -18,6 +18,21 @@ Commas are *not* used for this. A comma inside a cell has to be wrapped in
 quotes, and a forgotten quote is the single most common way one of these files
 breaks. Use `;` and you never have to think about it.
 
+## Mathematical notation
+
+Tutor Desk renders KaTeX-compatible TeX in every heading, instruction, passage,
+question, option, rubric and explanation:
+
+- use `$...$` for inline notation, such as `$x^2 + 3x - 4 = 0$`;
+- use `$$...$$` for display notation, such as `$$\frac{a}{b} = \frac{c}{d}$$`;
+- write a literal dollar sign as `\$`;
+- do not use a raw `|` inside TeX because CSV uses it to separate options,
+  blanks and rubric points; use `\lvert`, `\rvert` or `\mid` instead.
+
+Keep each `{{n}}` fill marker outside a math delimiter. For example, write
+`Solve $x+3=7$. $x =$ {{1}}`, not `$x+3={{1}}$`. This lets the app preserve the
+input field while rendering the surrounding notation correctly.
+
 ## Columns
 
 The first row must be a header. Names are case-insensitive and may appear in any
@@ -112,3 +127,5 @@ editor shows a green **Ready to assign** badge when it is clean.
 3. Every `fill` has as many `accepted` groups as it has `{{n}}` markers.
 4. Any cell containing a comma or a line break is wrapped in double quotes.
 5. `|` separates items, `;` separates alternatives — no commas used for either.
+6. TeX delimiters are balanced, fill markers sit outside them, and TeX does not
+   contain a raw `|` separator.

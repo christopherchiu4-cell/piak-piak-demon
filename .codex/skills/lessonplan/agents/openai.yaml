@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lesson Plan"
+  short_description: "Create concise Grade 7 lesson CSVs"
+  default_prompt: "Use $lessonplan to create concise Grade 7 Math and English Tutor Desk CSVs after asking the six required questions."
